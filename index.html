@@ -1,0 +1,1280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Research Question Roulette</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=Source+Sans+3:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,700&display=swap">
+<style>
+/* Layout: one working column for a projector. Six numbered pick tiles (one per resident, in turn order),
+   a chooser for the active tile, then the framed question set large in serif, followed by four working
+   panels a resident would need next: breakdown, hours to manuscript, IRB, and where the data lives.
+   Palette follows the University of Louisville deck: cardinal red, black, white, ash. */
+:root {
+  --bg: #F2F4F5;
+  --surface: #FFFFFF;
+  --wash: #E8ECED;
+  --ink: #14191B;
+  --muted: #56666B;
+  --line: #D1D9DC;
+  --accent: #AD0000;
+  --accent-text: #AD0000;
+  --on-accent: #FFFFFF;
+  --bar: #8B9DA1;
+  --ok: #1E6B45;
+  --ok-bg: #E2F1E8;
+  --warn: #8A5A00;
+  --warn-bg: #FBEFD5;
+  --stop: #AD0000;
+  --stop-bg: #F8E3E3;
+  --serif: "Source Serif 4", Cambria, Georgia, serif;
+  --sans: "Source Sans 3", Calibri, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F1315; --surface: #171C1E; --wash: #1F2629; --ink: #ECF0F1; --muted: #9EAFB3; --line: #2B3437;
+    --accent: #C21F1F; --accent-text: #F27272; --bar: #6E8287;
+    --ok: #7FD1A4; --ok-bg: #173226; --warn: #F0C36A; --warn-bg: #3A2E14; --stop: #F27272; --stop-bg: #3B1A1A;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F1315; --surface: #171C1E; --wash: #1F2629; --ink: #ECF0F1; --muted: #9EAFB3; --line: #2B3437;
+  --accent: #C21F1F; --accent-text: #F27272; --bar: #6E8287;
+  --ok: #7FD1A4; --ok-bg: #173226; --warn: #F0C36A; --warn-bg: #3A2E14; --stop: #F27272; --stop-bg: #3B1A1A;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 1.0625rem/1.5 var(--sans);
+  padding-inline: clamp(16px, 4vw, 40px);
+  padding-block: 28px 56px;
+}
+.wrap { max-width: 1180px; margin-inline: auto; display: flex; flex-direction: column; gap: 28px; }
+.stack { display: flex; flex-direction: column; gap: 14px; }
+
+.kicker { margin: 0 0 12px; font: 500 0.78rem/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent-text); }
+h1 { margin: 0 0 12px; font: 700 clamp(2rem, 5.2vw, 3.5rem)/1.05 var(--serif); letter-spacing: -0.01em; text-wrap: balance; }
+.lede { margin: 0; max-width: 64ch; color: var(--muted); font-size: 1.1rem; }
+
+button { font-family: inherit; }
+:focus-visible { outline: 3px solid var(--accent-text); outline-offset: 2px; }
+
+/* pick tiles */
+.tiles { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+@media (min-width: 620px) { .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 1080px) { .tiles { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+.tile {
+  width: 100%; height: 100%; min-width: 0; display: flex; flex-direction: column; gap: 5px; text-align: left;
+  padding: 14px 14px 16px; background: var(--surface); color: inherit; border: 1px solid var(--line); border-radius: 6px;
+  cursor: pointer; font-size: 1rem;
+}
+@media (min-width: 620px) { .tile { min-height: 8.25rem; } }
+.tile[aria-current="true"] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.tile .who { font: 500 0.72rem/1.2 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.tile .what { font-weight: 700; font-size: 0.95rem; }
+.tile .val { font: 500 1.15rem/1.25 var(--serif); overflow-wrap: anywhere; }
+.tile .val.empty { font: 400 0.95rem/1.3 var(--sans); color: var(--muted); }
+
+/* chooser */
+.chooser { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 18px clamp(14px, 3vw, 24px) 20px; display: flex; flex-direction: column; gap: 14px; }
+.chooser h2 { margin: 0; font: 700 1.3rem/1.2 var(--serif); }
+.chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { font: 600 0.98rem/1.1 var(--sans); padding: 10px 14px; background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; cursor: pointer; }
+.chip:hover { border-color: var(--muted); }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.domains { display: flex; flex-wrap: wrap; gap: 6px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.domain { font: 500 0.78rem/1.1 var(--mono); letter-spacing: 0.04em; padding: 7px 10px; background: transparent; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; cursor: pointer; }
+.domain:hover { color: var(--ink); border-color: var(--muted); }
+.domain[aria-pressed="true"] { color: var(--ink); border-color: var(--ink); background: var(--wash); }
+.domain .n { opacity: 0.7; margin-left: 4px; }
+.group { display: flex; flex-direction: column; gap: 8px; }
+.group-h { margin: 0; font: 500 0.74rem/1.2 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.chooser-foot { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 14px 24px; border-top: 1px solid var(--line); padding-top: 16px; }
+.custom { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1 1 22rem; }
+.custom label { font: 500 0.74rem/1.2 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.custom-row { display: flex; gap: 8px; }
+.custom input { flex: 1 1 auto; min-width: 0; padding: 10px 12px; font: 400 1rem/1.2 var(--sans); background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; }
+
+/* buttons */
+.btn { font: 700 1rem/1.1 var(--sans); padding: 12px 20px; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; white-space: nowrap; }
+.btn:hover:not(:disabled) { border-color: var(--muted); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.primary:hover:not(:disabled) { filter: brightness(1.1); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+
+/* result */
+.result, .empty-state { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: clamp(18px, 3.5vw, 36px); }
+.result { display: flex; flex-direction: column; gap: 26px; }
+.tag { margin: 0; font: 500 0.76rem/1.2 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.question { margin: 0; font: 500 clamp(1.4rem, 3vw, 2.25rem)/1.3 var(--serif); text-wrap: pretty; overflow-wrap: anywhere; }
+.design-line { margin: 0; display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+.design-name { font-weight: 700; }
+.pill { display: inline-block; font: 500 0.74rem/1 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; padding: 6px 9px; border-radius: 999px; white-space: nowrap; }
+.pill.yes { color: var(--stop); background: var(--stop-bg); }
+.pill.maybe { color: var(--warn); background: var(--warn-bg); }
+.pill.no { color: var(--ok); background: var(--ok-bg); }
+.pill.neutral { color: var(--muted); background: var(--wash); }
+
+.panels { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+@media (min-width: 860px) { .panels { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.panel { border-top: 2px solid var(--ink); padding-top: 14px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.panel h3 { margin: 0; font: 700 1.2rem/1.2 var(--serif); }
+.panel .sub { margin: 0; color: var(--muted); font-size: 0.95rem; }
+.meta { display: grid; grid-template-columns: minmax(6.5rem, 9.5rem) minmax(0, 1fr); gap: 8px 16px; margin: 0; }
+.meta dt { font: 500 0.72rem/1.6 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding-top: 0.15rem; }
+.meta dd { margin: 0; overflow-wrap: anywhere; }
+
+.hours-big { margin: 0; font: 700 clamp(1.8rem, 4vw, 2.6rem)/1 var(--serif); font-variant-numeric: tabular-nums; }
+.hours-big small { font: 600 1rem/1 var(--sans); color: var(--muted); margin-left: 6px; }
+.phases { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.phase { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 12px; font-size: 0.95rem; }
+.phase .num { font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; }
+.phase .track { grid-column: 1 / -1; height: 8px; background: var(--wash); border-radius: 4px; overflow: hidden; }
+.phase .fill { height: 100%; background: var(--bar); border-radius: 4px; }
+.phase.lead .fill { background: var(--accent); }
+.small-list { margin: 0; padding-left: 1.1rem; display: flex; flex-direction: column; gap: 6px; font-size: 0.95rem; }
+.fine { margin: 0; font-size: 0.85rem; color: var(--muted); }
+
+.sources { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.src { display: flex; flex-direction: column; gap: 2px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+.src:last-child { border-bottom: 0; padding-bottom: 0; }
+.src-name { font-weight: 700; }
+.src-access { font: 500 0.72rem/1.4 var(--mono); letter-spacing: 0.04em; color: var(--accent-text); }
+.src-note { font-size: 0.93rem; color: var(--muted); }
+.src-h { margin: 6px 0 0; font: 500 0.74rem/1.2 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+
+.heads { background: var(--warn-bg); color: var(--ink); border-radius: 4px; padding: 12px 14px; margin: 0; }
+.heads b { font: 500 0.74rem/1.4 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--warn); margin-right: 8px; }
+.warns { display: flex; flex-direction: column; gap: 8px; }
+.discuss h3 { margin: 0 0 10px; font: 700 1.2rem/1.2 var(--serif); }
+.discuss ul { margin: 0; padding-left: 1.2rem; display: flex; flex-direction: column; gap: 8px; }
+.status { color: var(--muted); font-size: 0.95rem; }
+.empty-state { border-style: dashed; background: transparent; }
+.empty-state h2 { margin: 0 0 6px; font: 700 1.3rem/1.2 var(--serif); }
+.empty-state p { margin: 0; color: var(--muted); }
+
+.similar { border-top: 2px solid var(--ink); padding-top: 14px; display: flex; flex-direction: column; gap: 12px; }
+.similar h3 { margin: 0; font: 700 1.2rem/1.2 var(--serif); }
+.links { display: flex; flex-wrap: wrap; gap: 8px; }
+a.btn { text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+a.btn .arrow { font-family: var(--mono); font-size: 0.85em; color: var(--muted); }
+.claude-box { background: var(--wash); border-radius: 6px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.claude-box .row { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
+.filled { margin: 0; font-size: 0.95rem; }
+.filled b { font: 500 0.74rem/1.4 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ok); margin-right: 8px; }
+
+.papers { margin: 0; padding-left: 1.3rem; display: flex; flex-direction: column; gap: 10px; }
+.paper { display: flex; flex-direction: column; gap: 2px; }
+.paper a { color: var(--ink); font-weight: 600; text-decoration-color: var(--accent-text); text-underline-offset: 2px; }
+.paper-meta { font-size: 0.88rem; color: var(--muted); font-style: italic; }
+.live-count { font-weight: 700; color: var(--ink); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .tile, .chip, .btn, .domain { transition: border-color 0.12s ease, box-shadow 0.12s ease; }
+}
+</style>
+</head>
+<body>
+
+
+<main class="wrap">
+  <header>
+    <p class="kicker">Research 101 &middot; Group activity</p>
+    <h1>Research Question Roulette</h1>
+    <p class="lede">Six residents each pick one ingredient, in order. The page turns the picks into a research question, then shows where the data lives, whether you need the IRB, and roughly how many hours stand between you and a manuscript.</p>
+  </header>
+
+  <section class="stack" aria-label="The six picks">
+    <ol class="tiles" id="tiles"></ol>
+
+    <div class="chooser">
+      <h2 id="chooser-title"></h2>
+      <div class="domains" id="domains" hidden></div>
+      <div id="chips"></div>
+      <div class="chooser-foot">
+        <form class="custom" id="custom-form">
+          <label for="custom-input">Or type your own</label>
+          <div class="custom-row">
+            <input id="custom-input" type="text" maxlength="60" autocomplete="off">
+            <button class="btn" type="submit">Use mine</button>
+          </div>
+        </form>
+        <button class="btn" id="spin" type="button">Spin for me</button>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn primary" id="frame" type="button">Frame the question</button>
+      <button class="btn" id="fill" type="button">Fill empty picks at random</button>
+      <button class="btn" id="reset" type="button">New round</button>
+    </div>
+  </section>
+
+  <section id="result" aria-live="polite" aria-label="Research question"></section>
+</main>
+
+<script>
+/* Research Question Roulette: content. Loaded inline into the page. */
+var RQR_DATA = (function () {
+  'use strict';
+
+  /* ---------- data sources ---------- */
+  var S = {
+    ehr: { name: "Your ED's electronic health record (chart review)", access: 'Your institution', note: 'Visit-level detail; plan a standardized abstraction form and train abstractors.' },
+    rdw: { name: "Your health system's research data warehouse", access: 'Your institution', note: 'Bulk EHR extracts by query; ask your informatics or research IT team.' },
+    redcap: { name: 'REDCap or Qualtrics', access: 'Usually free through your institution', note: 'Secure forms for prospective data collection and surveys.' },
+    transcription: { name: 'Audio recording and transcription service', access: 'Institution-approved vendor', note: 'Needed for interview and focus-group studies.' },
+    ctgov: { name: 'ClinicalTrials.gov', access: 'Free registration', note: 'Register the study before enrolling the first patient.' },
+    pubmed: { name: 'PubMed / MEDLINE', access: 'Free', note: 'Core biomedical database for any review.' },
+    embase: { name: 'Embase', access: 'Library subscription', note: 'Adds drug and European literature that MEDLINE misses.' },
+    cochrane: { name: 'Cochrane Library (CENTRAL)', access: 'Library subscription', note: 'Best source for randomized trials.' },
+    cinahl: { name: 'CINAHL', access: 'Library subscription', note: 'Nursing, EMS and allied health literature.' },
+    prospero: { name: 'PROSPERO', access: 'Free registration', note: 'Register the systematic review protocol before screening.' },
+    osf: { name: 'Open Science Framework (OSF)', access: 'Free registration', note: 'Where scoping review protocols are usually registered.' },
+
+    nhamcs: { name: 'NHAMCS, ED component (CDC)', access: 'Free public download', note: 'National sample of US ED visits: diagnoses, tests, medications, disposition.' },
+    neds: { name: 'HCUP Nationwide Emergency Department Sample (NEDS)', access: 'Paid, data use agreement', note: 'Largest all-payer US ED database; diagnoses, procedures, charges.' },
+    nis: { name: 'HCUP National Inpatient Sample (NIS)', access: 'Paid, data use agreement', note: 'National hospital admissions, including those admitted from the ED.' },
+    mimic: { name: 'MIMIC-IV-ED', access: 'Free after PhysioNet credentialing', note: 'Detailed de-identified ED visits from one Boston academic center.' },
+    trinetx: { name: 'TriNetX or Epic Cosmos', access: 'Institutional access needed', note: 'De-identified EHR data across many health systems.' },
+    ntdb: { name: 'ACS TQIP / National Trauma Data Bank', access: 'Application through ACS', note: 'Trauma center registry with injury severity and outcomes.' },
+    cares: { name: 'CARES (Cardiac Arrest Registry to Enhance Survival)', access: 'Participating agencies; research application', note: 'Out-of-hospital cardiac arrest from 911 call to discharge.' },
+    gwtg: { name: 'AHA Get With The Guidelines registries', access: 'Participating hospitals; research proposal', note: 'Stroke, resuscitation, heart failure and AFib modules.' },
+    ncdr: { name: 'ACC NCDR Chest Pain-MI Registry', access: 'Participating hospitals', note: 'Chest pain and myocardial infarction care and outcomes.' },
+    nemsis: { name: 'NEMSIS (National EMS Information System)', access: 'Free research dataset, application', note: 'National EMS activations, interventions and timings.' },
+    pecarn: { name: 'PECARN public-use datasets and PECARN Registry', access: 'Public datasets free; registry via network sites', note: 'Pediatric emergency care studies and multi-site EHR registry.' },
+    phis: { name: "PHIS (Pediatric Health Information System)", access: "Children's Hospital Association members", note: "Administrative and billing data from US children's hospitals." },
+    nsqip: { name: 'ACS NSQIP-Pediatric', access: 'Participating hospitals', note: 'Surgical outcomes, including appendectomy.' },
+    neiss: { name: 'NEISS and NEISS-AIP (CPSC)', access: 'Free public query and download', note: 'National injury surveillance from a sample of US EDs.' },
+    wisqars: { name: 'CDC WISQARS', access: 'Free online', note: 'National injury deaths and nonfatal injury estimates.' },
+    nvdrs: { name: 'NVDRS (National Violent Death Reporting System)', access: 'Restricted-access application', note: 'Detailed circumstances of suicides and homicides.' },
+    npds: { name: "National Poison Data System (America's Poison Centers)", access: 'Application, fee', note: 'Every call to US poison centers: exposures, treatments, outcomes.' },
+    toxic: { name: 'ToxIC Core Registry (ACMT)', access: 'Member sites; research proposal', note: 'Bedside medical toxicology consultations.' },
+    dose: { name: 'CDC DOSE and SUDORS overdose surveillance', access: 'Public dashboards; restricted data by request', note: 'ED overdose visits and overdose death circumstances.' },
+    kasper: { name: 'KASPER (Kentucky prescription monitoring program)', access: 'Restricted; research request to the state', note: 'Controlled-substance prescriptions filled in Kentucky.' },
+    kiprc: { name: 'Kentucky Injury Prevention and Research Center (KIPRC)', access: 'Public dashboards; data requests', note: 'Kentucky injury, overdose and ED visit surveillance.' },
+    nssp: { name: 'CDC NSSP syndromic surveillance', access: 'Through your state health department', note: 'Near-real-time ED visit data by syndrome.' },
+    nvsn: { name: 'CDC NVSN, FluSurv-NET and RSV-NET', access: 'Public summary data; network sites', note: 'Respiratory virus hospitalizations and vaccine effectiveness.' },
+    n3c: { name: 'N3C (National COVID Cohort Collaborative)', access: 'Free with institutional data use agreement', note: 'Harmonized EHR data on COVID-19 patients and controls.' },
+    medicare: { name: 'Medicare claims (CMS, via ResDAC)', access: 'Paid, data use agreement', note: 'Older adults across ED, inpatient and outpatient care.' },
+    marketscan: { name: 'MarketScan commercial claims', access: 'Paid license', note: 'Privately insured patients and their prescriptions.' },
+    popsurvey: { name: 'BRFSS, NHIS and NSDUH population surveys', access: 'Free public download', note: 'Population prevalence of conditions, behaviors and substance use.' },
+    prams: { name: 'PRAMS (Pregnancy Risk Assessment Monitoring System)', access: 'Free, application', note: 'Maternal experiences before, during and after pregnancy.' },
+    wonder: { name: 'CDC WONDER', access: 'Free online', note: 'National death and birth statistics by cause and place.' },
+    fars: { name: 'FARS (NHTSA Fatality Analysis Reporting System)', access: 'Free public download', note: 'Every fatal motor vehicle crash in the US.' },
+    carecompare: { name: 'CMS Care Compare ED measures', access: 'Free public download', note: 'Hospital-level ED throughput times and related measures.' },
+    edba: { name: 'Emergency Department Benchmarking Alliance survey', access: 'Member EDs', note: 'Annual ED operations metrics: volume, LWBS, boarding.' },
+    near: { name: 'NEAR (National Emergency Airway Registry)', access: 'Participating sites', note: 'ED intubations: devices, drugs, first-pass success, adverse events.' },
+    psrc: { name: 'Pediatric Sedation Research Consortium registry', access: 'Participating sites', note: 'Pediatric procedural sedation and adverse events.' },
+    biolincc: { name: 'Completed NIH trial datasets (BioLINCC, NINDS archive)', access: 'Free, application', note: 'Reanalyze finished resuscitation, trauma and neurology trials.' },
+    fitbir: { name: 'FITBIR (federal TBI research data, incl. TRACK-TBI)', access: 'Free, application', note: 'Traumatic brain injury studies with imaging and outcomes.' },
+    adi: { name: 'Neighborhood Atlas (ADI) and CDC/ATSDR Social Vulnerability Index', access: 'Free public download', note: 'Link patient addresses to neighborhood disadvantage.' },
+    noaa: { name: 'NOAA climate and heat-index data', access: 'Free public download', note: 'Link visit dates and places to temperature and weather.' },
+    airnow: { name: 'EPA AirNow and AQS air-quality data', access: 'Free public download', note: 'Daily PM2.5 and ozone by monitor and county.' },
+    atlas: { name: 'CDC AtlasPlus (HIV, hepatitis, STI surveillance)', access: 'Free online', note: 'County and state rates for comparison.' },
+    hmis: { name: 'Local Homeless Management Information System (HMIS)', access: 'Data agreement with your Continuum of Care', note: 'Shelter and housing-service use, linkable to ED visits.' },
+    crash: { name: 'State police crash records', access: 'Public request; varies by state', note: 'Crash circumstances, restraint use, location.' },
+    fema: { name: 'FEMA disaster declarations and published after-action reports', access: 'Free online', note: 'Event timelines, scale and system response.' },
+    npr: { name: 'National Pediatric Readiness Project assessment scores', access: 'Request through the project', note: "Each ED's weighted pediatric readiness score." },
+    milestones: { name: "Your program's ACGME Milestones and evaluation data", access: 'Program access; needs IRB determination', note: 'Resident performance over time.' },
+    instruments: { name: 'Validated survey instruments (Mini-Z, Maslach Burnout Inventory)', access: 'Mini-Z free; MBI licensed', note: 'Use a validated tool instead of writing your own questions.' },
+    simlog: { name: 'Simulation center and procedure logs', access: 'Program access', note: 'Sessions completed, checklists, procedure counts.' },
+    incident: { name: 'Hospital incident and safety reports', access: 'Patient safety office; needs approval', note: 'Reported events, including assaults on staff.' },
+    usarch: { name: "Your department's ultrasound image archive", access: 'Your institution', note: 'Saved clips with indications and interpretations.' },
+    kyhosp: { name: 'Kentucky hospital and ED discharge data (Cabinet for Health and Family Services)', access: 'Data request; fee may apply', note: 'Every ED visit and admission in Kentucky hospitals.' },
+    localreg: { name: 'Local hospital registers and logbooks', access: 'Site permission', note: 'Often paper; a prospective registry may be the better design.' }
+  };
+
+  /* ---------- topics ---------- */
+  function T(domain, label, noun, cohort, exposure, outcome, intervention, o) {
+    o = o || {};
+    return {
+      domain: domain, label: label, noun: noun, cohort: cohort, exposure: exposure, outcome: outcome,
+      intervention: intervention, rare: o.rare || [], src: o.src || [], sex: o.sex || '', efic: !!o.efic, staff: !!o.staff
+    };
+  }
+  var KIDS = ['infants', 'children'];
+  var KIDS3 = ['infants', 'children', 'adolescents'];
+  var ADULTS = ['young', 'middle', 'older'];
+
+  var TOPICS = [
+    // Resuscitation and critical care
+    T('Resuscitation and critical care', 'Cardiac arrest', 'out-of-hospital cardiac arrest', 'with an out-of-hospital cardiac arrest', 'bystander CPR', 'survival to hospital discharge', 'dispatcher-assisted CPR coaching', { src: ['cares', 'gwtg', 'nemsis', 'biolincc'], efic: true }),
+    T('Resuscitation and critical care', 'Sepsis', 'sepsis', 'with sepsis', 'time to first antibiotic dose', 'in-hospital mortality', 'a nurse-initiated sepsis screening protocol', { src: ['mimic', 'neds', 'nis', 'trinetx'] }),
+    T('Resuscitation and critical care', 'Emergency airway', 'emergency intubation', 'who need emergency intubation', 'use of video laryngoscopy', 'the first-attempt intubation success rate', 'a pre-intubation checklist', { src: ['near', 'mimic'] }),
+    T('Resuscitation and critical care', 'Critical care boarding', 'critical care boarding', 'who are critically ill and board in the ED', 'boarding longer than 6 hours', 'in-hospital mortality', 'an ED-based intensive care unit', { src: ['mimic', 'neds', 'trinetx'] }),
+    T('Resuscitation and critical care', 'Undifferentiated shock', 'undifferentiated shock', 'with undifferentiated shock', 'a point-of-care ultrasound protocol', 'the time to correct diagnosis', 'a RUSH ultrasound protocol', { src: ['usarch', 'mimic'] }),
+
+    // Cardiovascular
+    T('Cardiovascular', 'Chest pain', 'chest pain', 'with chest pain', 'use of a high-sensitivity troponin pathway', 'the rate of major adverse cardiac events within 30 days', 'a rapid rule-out pathway', { rare: KIDS, src: ['ncdr', 'nhamcs', 'neds', 'mimic'] }),
+    T('Cardiovascular', 'STEMI', 'ST-elevation myocardial infarction', 'with ST-elevation myocardial infarction', 'a prehospital ECG', 'door-to-balloon time', 'prehospital cath lab activation', { rare: KIDS3, src: ['ncdr', 'gwtg', 'nemsis'] }),
+    T('Cardiovascular', 'Atrial fibrillation', 'atrial fibrillation', 'with atrial fibrillation with rapid ventricular response', 'ED cardioversion', 'the 30-day return visit rate', 'an ED discharge pathway for atrial fibrillation', { rare: KIDS3, src: ['neds', 'gwtg', 'mimic'] }),
+    T('Cardiovascular', 'Heart failure', 'acute heart failure', 'with acute heart failure', 'early IV diuretic dosing', 'the 30-day readmission rate', 'an ED observation protocol', { rare: KIDS3, src: ['neds', 'nis', 'gwtg', 'medicare'] }),
+    T('Cardiovascular', 'Syncope', 'syncope', 'with syncope', 'measuring orthostatic vital signs at triage', 'the rate of serious cardiac outcomes within 30 days', 'a syncope risk-stratification tool', { rare: ['infants'], src: ['neds', 'mimic', 'nhamcs'] }),
+    T('Cardiovascular', 'Pulmonary embolism', 'pulmonary embolism', 'with suspected pulmonary embolism', 'use of an age-adjusted D-dimer', 'the CT pulmonary angiography use rate', 'a clinical decision support alert', { rare: KIDS, src: ['neds', 'mimic', 'trinetx'] }),
+    T('Cardiovascular', 'Aortic dissection', 'aortic dissection', 'with suspected aortic dissection', 'time to CT angiography', 'in-hospital mortality', 'a dissection risk score combined with D-dimer', { rare: KIDS3, src: ['neds', 'nis', 'mimic'] }),
+
+    // Neurology
+    T('Neurology', 'Stroke', 'acute stroke', 'with acute stroke symptoms', 'arrival by EMS', 'door-to-needle time', 'a prehospital stroke alert', { rare: ['infants'], src: ['gwtg', 'nemsis', 'neds'] }),
+    T('Neurology', 'Seizure', 'prolonged seizures', 'with a prolonged seizure', 'a weight-based benzodiazepine dose given by EMS', 'the time to seizure cessation', 'a standardized seizure dosing chart', { src: ['pecarn', 'nemsis', 'biolincc'], efic: true }),
+    T('Neurology', 'Headache', 'severe headache', 'with a severe headache', 'CT imaging in the ED', 'the rate of serious intracranial findings', 'a headache imaging decision rule', { src: ['nhamcs', 'neds', 'pecarn'] }),
+    T('Neurology', 'Dizziness', 'acute dizziness', 'with acute dizziness', 'use of the HINTS bedside exam', 'the rate of missed stroke within 30 days', 'HINTS training for emergency physicians', { rare: KIDS, src: ['neds', 'mimic'] }),
+
+    // Trauma and injury
+    T('Trauma and injury', 'Head injury', 'mild traumatic brain injury', 'with a mild traumatic brain injury', 'CT imaging in the ED', 'the rate of persistent symptoms at 3 months', 'a decision rule for CT use', { src: ['pecarn', 'ntdb', 'fitbir', 'neiss'] }),
+    T('Trauma and injury', 'Traumatic hemorrhage', 'major traumatic hemorrhage', 'with major traumatic hemorrhage', 'prehospital whole blood transfusion', '24-hour mortality', 'a prehospital whole blood program', { src: ['ntdb', 'nemsis', 'biolincc'], efic: true }),
+    T('Trauma and injury', 'Firearm injury', 'firearm injury', 'with a firearm injury', 'unmet social needs at presentation', 'the 12-month return ED visit rate', 'a hospital-based violence intervention program', { src: ['nvdrs', 'neiss', 'wisqars', 'ntdb'] }),
+    T('Trauma and injury', 'Motor vehicle crash', 'motor vehicle crash injuries', 'injured in a motor vehicle crash', 'seat belt use', 'the injury severity score', 'an ED-based car seat and seat belt education program', { src: ['fars', 'ntdb', 'crash', 'nemsis'] }),
+    T('Trauma and injury', 'Falls', 'ground-level falls', 'after a ground-level fall', 'anticoagulant use', 'the rate of intracranial hemorrhage', 'a geriatric fall pathway', { src: ['neiss', 'medicare', 'ntdb', 'wisqars'] }),
+    T('Trauma and injury', 'Hip fracture', 'hip fractures', 'with a hip fracture', 'a fascia iliaca nerve block in the ED', 'the rate of delirium during admission', 'an ED regional anesthesia program', { rare: KIDS3, src: ['medicare', 'ntdb', 'nis'] }),
+    T('Trauma and injury', 'Forearm fracture', 'distal forearm fractures', 'with a distal forearm fracture', 'ultrasound-guided fracture reduction', 'the repeat reduction rate', 'point-of-care ultrasound training for reductions', { src: ['neiss', 'phis', 'neds'] }),
+    T('Trauma and injury', 'Burns', 'burn injuries', 'with burn injuries', 'prehospital fluid volume', 'length of hospital stay', 'a telemedicine burn consult', { src: ['ntdb', 'neiss', 'nis'] }),
+    T('Trauma and injury', 'Drowning', 'drowning', 'after a drowning', 'bystander rescue breathing', 'survival with good neurologic function', 'a community water-safety program', { src: ['wisqars', 'cares', 'nemsis'] }),
+    T('Trauma and injury', 'Elder abuse', 'elder abuse', 'with suspected elder abuse', 'a positive screen at triage', 'the referral rate to adult protective services', 'a universal elder abuse screening tool', { rare: ['infants', 'children', 'adolescents', 'young'], src: ['neds', 'medicare', 'nhamcs'] }),
+    T('Trauma and injury', 'Child abuse', 'child physical abuse', 'with suspected physical abuse', 'a skeletal survey', 'the rate of missed sentinel injuries', 'a child abuse clinical decision support alert', { rare: ADULTS, src: ['phis', 'pecarn', 'neiss'] }),
+    T('Trauma and injury', 'Partner violence', 'intimate partner violence', 'with intimate partner violence injuries', 'routine screening', 'the 30-day advocacy service use rate', 'a screening-and-referral workflow', { rare: KIDS, src: ['neiss', 'nvdrs', 'nhamcs'] }),
+
+    // Toxicology and substance use
+    T('Toxicology and substance use', 'Opioid overdose', 'opioid overdose', 'after an opioid overdose', 'naloxone given before arrival', 'the 30-day treatment linkage rate', 'ED-initiated buprenorphine', { src: ['dose', 'nemsis', 'kasper', 'neds'] }),
+    T('Toxicology and substance use', 'Opioid use disorder', 'opioid use disorder', 'with opioid use disorder', 'ED-initiated buprenorphine', 'the 30-day addiction treatment engagement rate', 'a peer recovery coach program', { rare: KIDS, src: ['kasper', 'neds', 'trinetx'] }),
+    T('Toxicology and substance use', 'Alcohol withdrawal', 'alcohol withdrawal', 'with alcohol withdrawal', 'symptom-triggered benzodiazepine dosing', 'the ICU admission rate', 'a standardized withdrawal protocol', { rare: KIDS, src: ['neds', 'mimic', 'popsurvey'] }),
+    T('Toxicology and substance use', 'Cannabis hyperemesis', 'cannabinoid hyperemesis syndrome', 'with cannabinoid hyperemesis syndrome', 'haloperidol treatment', 'ED length of stay', 'a cannabinoid hyperemesis order set', { rare: KIDS, src: ['neds', 'nhamcs', 'npds'] }),
+    T('Toxicology and substance use', 'Accidental ingestion', 'accidental ingestions', 'after an accidental ingestion', 'ingestion of a cannabis edible', 'the ICU admission rate', 'poison center co-management', { src: ['npds', 'toxic', 'phis'] }),
+    T('Toxicology and substance use', 'Acetaminophen overdose', 'acetaminophen overdose', 'after an acetaminophen overdose', 'time to N-acetylcysteine', 'the rate of liver injury', 'a 12-hour N-acetylcysteine regimen', { src: ['npds', 'toxic', 'neds'] }),
+    T('Toxicology and substance use', 'Methamphetamine', 'methamphetamine-related visits', 'presenting after methamphetamine use', 'physical restraint in the ED', 'ED length of stay', 'an agitation management protocol', { rare: KIDS, src: ['neds', 'dose', 'toxic'] }),
+    T('Toxicology and substance use', 'Snakebite', 'snakebites', 'with a snakebite', 'time to antivenom', 'length of hospital stay', 'a telephone toxicology consult protocol', { src: ['npds', 'toxic'] }),
+    T('Toxicology and substance use', 'Carbon monoxide', 'carbon monoxide poisoning', 'with carbon monoxide poisoning', 'hyperbaric oxygen treatment', 'the rate of delayed neurologic problems at 6 weeks', 'carbon monoxide detector distribution at discharge', { src: ['npds', 'toxic', 'nssp', 'wisqars'] }),
+
+    // Respiratory and infectious disease
+    T('Respiratory and infection', 'Asthma', 'asthma exacerbations', 'with an asthma exacerbation', 'early systemic steroid use', 'the hospital admission rate', 'a standardized asthma order set', { src: ['nhamcs', 'phis', 'popsurvey', 'neds'] }),
+    T('Respiratory and infection', 'COPD', 'COPD exacerbations', 'with a COPD exacerbation', 'early noninvasive ventilation', 'the ICU admission rate', 'a COPD discharge bundle', { rare: ['infants', 'children', 'adolescents', 'young'], src: ['neds', 'medicare', 'mimic'] }),
+    T('Respiratory and infection', 'Bronchiolitis', 'bronchiolitis', 'with bronchiolitis', 'high-flow nasal cannula use', 'the ICU admission rate', 'a bronchiolitis clinical pathway', { rare: ['adolescents', 'young', 'middle', 'older'], src: ['phis', 'pecarn', 'nvsn'] }),
+    T('Respiratory and infection', 'Influenza and RSV', 'influenza and RSV', 'with influenza or RSV', 'point-of-care viral testing', 'the antibiotic prescribing rate', 'a rapid viral testing pathway', { src: ['nvsn', 'nssp', 'nhamcs'] }),
+    T('Respiratory and infection', 'COVID-19', 'COVID-19', 'with COVID-19', 'vaccination status', 'the 30-day hospitalization rate', 'an ED antiviral prescribing pathway', { src: ['n3c', 'nssp', 'nhamcs'] }),
+    T('Respiratory and infection', 'Fever', 'fever', 'with fever', 'point-of-care viral testing', 'the antibiotic prescribing rate', 'a febrile infant clinical pathway', { src: ['pecarn', 'phis', 'nhamcs'] }),
+    T('Respiratory and infection', 'Pneumonia', 'community-acquired pneumonia', 'with community-acquired pneumonia', 'lung ultrasound diagnosis', 'the 30-day return visit rate', 'a severity score for disposition decisions', { src: ['nhamcs', 'neds', 'mimic'] }),
+    T('Respiratory and infection', 'Skin infection', 'abscess and cellulitis', 'with an abscess or cellulitis', 'point-of-care ultrasound', 'the treatment failure rate', 'ultrasound-guided drainage', { src: ['nhamcs', 'neds'] }),
+    T('Respiratory and infection', 'Urinary tract infection', 'urinary tract infections', 'with a urinary tract infection', 'urine culture follow-up', 'the rate of appropriate antibiotic choice', 'an ED antibiotic stewardship program', { src: ['nhamcs', 'mimic', 'neds'] }),
+    T('Respiratory and infection', 'HIV and hepatitis C screening', 'HIV and hepatitis C screening', 'eligible for HIV screening', 'opt-out HIV testing', 'the new HIV diagnosis rate', 'an opt-out ED HIV and hepatitis C screening program', { rare: KIDS, src: ['nhamcs', 'trinetx', 'atlas'] }),
+
+    // Abdominal, renal and metabolic
+    T('Abdominal, renal and metabolic', 'Appendicitis', 'suspected appendicitis', 'with suspected appendicitis', 'ultrasound as the first imaging test', 'the CT use rate', 'an ultrasound-first imaging pathway', { src: ['phis', 'nsqip', 'neds'] }),
+    T('Abdominal, renal and metabolic', 'GI bleeding', 'upper GI bleeding', 'with upper GI bleeding', 'a Glasgow-Blatchford score of 0 or 1', 'the safe outpatient discharge rate', 'a low-risk discharge pathway', { rare: KIDS, src: ['neds', 'mimic', 'nis'] }),
+    T('Abdominal, renal and metabolic', 'Kidney stones', 'renal colic', 'with renal colic', 'CT imaging', 'the 30-day return visit rate', 'ultrasound-first imaging', { rare: KIDS, src: ['nhamcs', 'neds'] }),
+    T('Abdominal, renal and metabolic', 'DKA', 'diabetic ketoacidosis', 'with diabetic ketoacidosis', 'a two-bag IV fluid system', 'the time to DKA resolution', 'an ED DKA protocol', { rare: ['infants'], src: ['phis', 'neds', 'mimic'] }),
+    T('Abdominal, renal and metabolic', 'Sickle cell pain', 'sickle cell pain crises', 'with a sickle cell pain crisis', 'time to first opioid dose', 'the hospital admission rate', 'an individualized ED pain plan', { src: ['phis', 'neds', 'trinetx'] }),
+
+    // Obstetrics, gynecology and genitourinary
+    T('OB/GYN and GU', 'Early pregnancy bleeding', 'first-trimester bleeding', 'with first-trimester vaginal bleeding', 'point-of-care pelvic ultrasound', 'ED length of stay', 'an early pregnancy clinic referral pathway', { rare: ['infants', 'children', 'older'], sex: 'female', src: ['nhamcs', 'neds', 'trinetx'] }),
+    T('OB/GYN and GU', 'Perinatal opioid use', 'perinatal opioid use disorder', 'who are pregnant or postpartum with opioid use disorder', 'ED-initiated buprenorphine', 'the 30-day prenatal or addiction care engagement rate', 'a perinatal substance use navigator', { rare: ['infants', 'children', 'older'], sex: 'female', src: ['prams', 'kasper', 'trinetx'] }),
+    T('OB/GYN and GU', 'Postpartum hypertension', 'postpartum hypertension', 'with postpartum hypertension or preeclampsia', 'time to antihypertensive treatment', 'the severe maternal morbidity rate', 'a postpartum hypertension ED protocol', { rare: ['infants', 'children', 'older'], sex: 'female', src: ['nis', 'neds', 'prams'] }),
+    T('OB/GYN and GU', 'Testicular torsion', 'testicular torsion', 'with acute scrotal pain', 'time to scrotal ultrasound', 'the testicular salvage rate', 'a direct-to-urology pathway', { rare: ['middle', 'older'], sex: 'male', src: ['phis', 'neds'] }),
+
+    // Behavioral health
+    T('Behavioral health', 'Suicidal ideation', 'suicidal ideation', 'with suicidal ideation', 'universal screening at triage', 'the 90-day repeat ED visit rate', 'a brief safety-planning intervention', { rare: ['infants'], src: ['nvdrs', 'nssp', 'nhamcs', 'neds'] }),
+    T('Behavioral health', 'Psychiatric boarding', 'psychiatric boarding', 'who board in the ED awaiting psychiatric care', 'boarding longer than 24 hours', 'the restraint use rate', 'an ED psychiatric telehealth consult service', { rare: ['infants'], src: ['neds', 'nhamcs', 'trinetx'] }),
+    T('Behavioral health', 'Delirium', 'delirium', 'with delirium', 'delirium screening at triage', 'the 30-day mortality rate', 'a geriatric ED delirium protocol', { rare: ['infants', 'children', 'adolescents', 'young'], src: ['medicare', 'mimic', 'neds'] }),
+
+    // Environmental
+    T('Environmental', 'Heat illness', 'heat-related illness', 'with heat-related illness', 'prehospital cooling', 'the time to core temperature below 39 °C', 'cold-water immersion', { src: ['nssp', 'noaa', 'neds'] }),
+    T('Environmental', 'Cold injury', 'hypothermia and frostbite', 'with hypothermia or frostbite', 'active rewarming in the ED', 'the amputation rate', 'thrombolytics for severe frostbite', { src: ['neds', 'nis', 'noaa'] }),
+    T('Environmental', 'Air pollution', 'air pollution and breathing problems', 'with respiratory symptoms', 'exposure to high PM2.5 air pollution', 'the hospital admission rate', 'air-quality text alerts for patients with lung disease', { src: ['nssp', 'airnow', 'nhamcs'] }),
+
+    // Pediatric and geriatric systems
+    T('Special populations', 'Pediatric readiness', 'pediatric readiness', 'seen in the ED', "the ED's pediatric readiness score", 'in-hospital mortality', 'a pediatric emergency care coordinator', { rare: ADULTS, src: ['npr', 'neds', 'phis', 'pecarn'] }),
+    T('Special populations', 'Polypharmacy', 'polypharmacy', 'taking 10 or more medications', 'potentially inappropriate medications on the Beers list', 'the 30-day return visit rate', 'an ED pharmacist medication review', { rare: ['infants', 'children', 'adolescents', 'young'], src: ['medicare', 'nhamcs'] }),
+    T('Special populations', 'Homelessness', 'homelessness', 'experiencing homelessness', 'the number of ED visits in the past year', 'the 30-day return visit rate', 'an ED-based housing and case-management referral', { rare: ['infants'], src: ['hmis', 'neds', 'adi'] }),
+    T('Special populations', 'Social needs', 'unmet social needs', 'with unmet social needs', 'food insecurity', 'the 30-day return visit rate', 'an ED social needs screening and referral program', { src: ['adi', 'nhamcs', 'popsurvey'] }),
+    T('Special populations', 'Language barriers', 'language barriers', 'with limited English proficiency', 'use of a professional interpreter', 'ED length of stay', 'video interpreter access at every bed', { src: ['trinetx', 'nhamcs'] }),
+    T('Special populations', 'Analgesia disparities', 'disparities in pain treatment', 'with long-bone fractures', 'patient race and ethnicity', 'the rate of analgesia within 60 minutes', 'a nurse-initiated analgesia protocol', { src: ['nhamcs', 'neds', 'pecarn'] }),
+
+    // Pain and procedures
+    T('Pain and procedures', 'Acute pain and opioids', 'opioid prescribing for acute pain', 'with acute musculoskeletal pain', 'an opioid prescription at discharge', 'the rate of persistent opioid use at 90 days', 'an opioid-sparing analgesia protocol', { src: ['nhamcs', 'kasper', 'marketscan'] }),
+    T('Pain and procedures', 'Procedural sedation', 'procedural sedation', 'who need procedural sedation', 'ketamine use', 'the adverse airway event rate', 'a sedation safety checklist', { src: ['psrc'] }),
+
+    // ED operations and systems
+    T('ED operations', 'Boarding and crowding', 'ED boarding', 'who board in the ED after admission', 'boarding longer than 4 hours', 'in-hospital mortality', 'a full-capacity protocol', { src: ['carecompare', 'edba', 'nhamcs', 'neds'] }),
+    T('ED operations', 'Left without being seen', 'leaving without being seen', 'who leave without being seen', 'waiting room time', 'the 72-hour return visit rate', 'a provider-in-triage model', { src: ['carecompare', 'edba', 'nhamcs'] }),
+    T('ED operations', 'Return visits', 'unplanned return visits', 'who return to the ED within 72 hours', 'discharge without a follow-up appointment', 'the admission rate at the return visit', 'a post-discharge phone call program', { src: ['neds', 'nhamcs', 'trinetx'] }),
+    T('ED operations', 'Diagnostic error', 'diagnostic error', 'discharged from the ED', 'high ED census at the time of the visit', 'the rate of missed serious diagnoses within 30 days', 'a diagnostic time-out before discharge', { src: ['neds', 'trinetx', 'medicare'] }),
+    T('ED operations', 'AI in triage', 'AI-assisted triage', 'triaged in the ED', 'use of an AI-based triage score', 'the under-triage rate', 'an AI triage decision-support tool', { src: ['mimic', 'trinetx'] }),
+    T('ED operations', 'Interfacility transfer', 'interfacility transfers', 'transferred from a rural ED', 'transfer distance', 'the potentially avoidable transfer rate', 'tele-emergency specialist consults', { src: ['neds', 'nis', 'ntdb'] }),
+
+    // EMS and disaster
+    T('EMS and disaster', 'EMS response', 'EMS response times', 'with time-sensitive emergencies transported by EMS', 'EMS response time over 15 minutes', 'in-hospital mortality', 'a rural first-responder program', { src: ['nemsis', 'neds'] }),
+    T('EMS and disaster', 'Mass casualty', 'mass casualty incidents', 'injured in a mass casualty incident', 'distance to the nearest trauma center', 'in-hospital mortality', 'a regional patient distribution plan', { src: ['fema', 'nemsis', 'ntdb'] }),
+
+    // Education and workforce (clinicians are the study population)
+    T('Education and workforce', 'Burnout', 'burnout', '', 'the number of night shifts per month', 'the burnout score', 'a peer-support program', { staff: true, src: ['instruments', 'milestones'] }),
+    T('Education and workforce', 'Simulation training', 'simulation training', 'who train in pediatric resuscitation', 'the number of simulation sessions completed', 'the score on a resuscitation skills checklist', 'monthly in-situ simulation', { staff: true, src: ['simlog', 'milestones'] }),
+    T('Education and workforce', 'Workplace violence', 'workplace violence', '', 'the ED crowding level', 'the rate of reported assaults on staff', 'a behavioral emergency response team', { staff: true, src: ['incident', 'instruments'] }),
+    T('Education and workforce', 'Procedural skills', 'procedural skill training', 'learning ultrasound-guided IV placement', 'the number of supervised attempts', 'the first-attempt success rate', 'a structured ultrasound curriculum', { staff: true, src: ['simlog', 'usarch'] })
+  ];
+
+  /* ---------- locations ---------- */
+  var LOCS = [
+    { label: 'Academic ED in Louisville', prep: 'in', place: 'an academic emergency department in Louisville', ky: true },
+    { label: 'Level I trauma center', prep: 'at', place: 'a Level I trauma center' },
+    { label: 'Rural critical access hospital', prep: 'at', place: 'a rural Kentucky critical access hospital', ky: true },
+    { label: 'Urban safety-net ED', prep: 'in', place: 'an urban safety-net emergency department' },
+    { label: 'Community ED', prep: 'in', place: 'a freestanding community emergency department' },
+    { label: "Children's hospital ED", prep: 'in', place: "a children's hospital emergency department", kids: true },
+    { label: 'VA emergency department', prep: 'in', place: 'a Veterans Affairs emergency department' },
+    { label: 'EMS / prehospital', prep: 'in', place: 'a prehospital EMS system', ems: true },
+    { label: 'Air medical transport', prep: 'in', place: 'an air medical transport service', ems: true },
+    { label: 'Urgent care', prep: 'at', place: 'an urgent care center' },
+    { label: 'Jail or prison health', prep: 'in', place: 'a county jail health service', prison: true },
+    { label: 'Kentucky Derby medical stations', prep: 'at', place: 'medical stations at the Kentucky Derby', ky: true },
+    { label: 'Louisville EDs', prep: 'across', place: 'Louisville emergency departments', ky: true, multi: true },
+    { label: 'Appalachian EDs', prep: 'in', place: 'Appalachian emergency departments', ky: true, multi: true },
+    { label: 'US emergency departments', prep: 'across', place: 'US emergency departments', multi: true, national: true },
+    { label: 'Low-resource ED, Africa', prep: 'at', place: 'a low-resource emergency unit in sub-Saharan Africa', lowres: true }
+  ];
+
+  /* ---------- time periods ---------- */
+  var TIMES = [
+    { label: '2021 to 2025', phrase: 'between 2021 and 2025', mode: 'retro' },
+    { label: 'Past 10 years', phrase: 'over the past 10 years', mode: 'retro' },
+    { label: 'COVID-19 pandemic', phrase: 'during the COVID-19 pandemic (2020 to 2021)', mode: 'retro' },
+    { label: 'Before and after COVID', phrase: 'from 2018 to 2023, before and after the pandemic', mode: 'retro' },
+    { label: 'July (new residents)', phrase: 'during July, when new residents start, from 2016 to 2025', mode: 'retro' },
+    { label: 'Summer months', phrase: 'during the summer months (June to August)', mode: 'retro' },
+    { label: 'Winter holidays', phrase: 'during the winter holidays (December 20 to January 2)', mode: 'retro' },
+    { label: 'Next 12 months', phrase: 'over the next 12 months', mode: 'prosp' },
+    { label: 'Next 2 years', phrase: 'over the next 2 years', mode: 'prosp' },
+    { label: 'Next flu season', phrase: 'over the next influenza season (October to March)', mode: 'prosp' },
+    { label: 'Overnight shifts', phrase: 'on overnight shifts (7 pm to 7 am) over the next 6 months', mode: 'prosp' }
+  ];
+
+  /* ---------- age groups ---------- */
+  var AGES = [
+    { id: 'infants', label: 'Infants', noun: 'infants (younger than 1 year)', kid: true },
+    { id: 'children', label: 'Children', noun: 'children (1 to 12 years)', kid: true },
+    { id: 'adolescents', label: 'Adolescents', noun: 'adolescents (13 to 17 years)', kid: true },
+    { id: 'young', label: 'Young adults', noun: 'young adults (18 to 39 years)' },
+    { id: 'middle', label: 'Middle-aged adults', noun: 'middle-aged adults (40 to 64 years)' },
+    { id: 'older', label: 'Older adults', noun: 'older adults (65 years and older)' }
+  ];
+
+  /* ---------- gender ---------- */
+  var GENDERS = [
+    { label: 'Women', adj: 'female', sex: 'female' },
+    { label: 'Men', adj: 'male', sex: 'male' },
+    { label: 'Transgender and nonbinary', adj: 'transgender and nonbinary' },
+    { label: 'Pregnant patients', adj: 'pregnant', sex: 'female', preg: true },
+    { label: 'All, compared', adj: '', compare: true }
+  ];
+
+  /* ---------- study designs ---------- */
+  var PH = ['Question and literature review', 'Protocol and approvals', 'Data collection', 'Analysis', 'Writing and revision'];
+  function D(id, label, short, mode, tpl, irb, phases, months, src, prompt) {
+    return { id: id, label: label, short: short, mode: mode, tpl: tpl, irb: irb, phases: phases, months: months, src: src, prompt: prompt };
+  }
+  var CHART_IRB_NOTE = 'Ask for a waiver of informed consent and a waiver of HIPAA authorization.';
+  var EHR_PROMPT = 'Where would this data live in the EHR, and what would be missing or miscoded?';
+  var DESIGNS = [
+    D('case', 'Case report or case series', 'Case report', 'retro', 'case',
+      { level: 'Usually not required', needed: 'maybe', text: 'Most US IRBs do not treat a report of 1 to 3 patients as research. You still need the patient’s written consent or full de-identification under HIPAA. Check your IRB’s case report policy.' },
+      [[5, 10], [2, 5], [5, 10], [0, 2], [20, 40]], '2 to 4', ['ehr'],
+      'What makes this case worth publishing: new, rare, or a lesson others keep missing?'),
+    D('chart', 'Retrospective chart review', 'Chart review', 'retro', 'desc',
+      { level: 'Exempt or expedited', needed: 'yes', text: 'Secondary use of existing records is usually exempt or expedited. ' + CHART_IRB_NOTE },
+      [[10, 20], [15, 30], [60, 150], [15, 30], [40, 80]], '6 to 12', ['ehr', 'rdw'], EHR_PROMPT),
+    D('cohort', 'Retrospective cohort study', 'Retrospective cohort', 'retro', 'assoc',
+      { level: 'Exempt or expedited', needed: 'yes', text: 'Existing records, no patient contact. ' + CHART_IRB_NOTE },
+      [[15, 25], [15, 30], [80, 200], [30, 60], [50, 90]], '9 to 15', ['ehr', 'rdw'],
+      'What confounders would you need to adjust for, and are they in the chart?'),
+    D('cc', 'Case-control study', 'Case-control', 'retro', 'assoc',
+      { level: 'Exempt or expedited', needed: 'yes', text: 'Existing records, no patient contact. ' + CHART_IRB_NOTE },
+      [[15, 25], [15, 30], [60, 150], [30, 60], [50, 90]], '9 to 15', ['ehr', 'rdw'],
+      'How would you pick controls so they come from the same population as the cases?'),
+    D('db', 'Secondary analysis of a national database', 'National database', 'retro', 'db',
+      { level: 'Often not human subjects research', needed: 'maybe', text: 'Public de-identified files (such as NHAMCS) are usually not human subjects research. Restricted or limited datasets need a data use agreement. Ask your IRB for a written determination.' },
+      [[15, 25], [5, 15], [15, 40], [40, 100], [50, 90]], '6 to 12', [],
+      'Does the database actually record your exposure and outcome, or only a proxy?'),
+    D('qi', 'Quality improvement (before and after)', 'QI project', 'either', 'qi',
+      { level: 'QI determination', needed: 'maybe', text: 'Many institutions treat QI as non-research, but if you plan to publish, get a written QI-versus-research determination before you start.' },
+      [[10, 20], [10, 20], [60, 150], [20, 40], [40, 80]], '9 to 18', ['ehr', 'rdw'],
+      'What else changed during the same period that could explain a before-and-after difference?'),
+    D('survey', 'Cross-sectional survey', 'Survey', 'either', 'survey',
+      { level: 'Usually exempt', needed: 'yes', text: 'Anonymous surveys of adults usually qualify for exemption (category 2). You still submit to the IRB, which makes the exemption call.' },
+      [[15, 25], [15, 30], [30, 80], [20, 40], [40, 80]], '6 to 12', ['redcap'],
+      'How would you get a response rate above 50 percent?'),
+    D('qual', 'Qualitative interview study', 'Qualitative', 'either', 'qual',
+      { level: 'Exempt or expedited', needed: 'yes', text: 'Interviews usually qualify as exempt or expedited. Plan for consent (often verbal), secure audio storage, and de-identified transcripts.' },
+      [[15, 25], [15, 30], [60, 120], [60, 120], [50, 90]], '9 to 15', ['redcap', 'transcription'],
+      'Who would you interview, and how would you know when you have heard enough?'),
+    D('prosp', 'Prospective cohort study', 'Prospective cohort', 'prosp', 'assoc',
+      { level: 'Expedited or full board', needed: 'yes', text: 'Enrolling patients going forward usually needs written informed consent. Minimal-risk observation is often expedited; anything more goes to the full board.' },
+      [[20, 40], [30, 60], [200, 600], [40, 80], [60, 100]], '18 to 36', ['redcap', 'ehr'],
+      'Who would enroll patients at the bedside at 3 am, and how would you handle consent in an emergency?'),
+    D('rct', 'Randomized controlled trial', 'RCT', 'prosp', 'interv',
+      { level: 'Full board', needed: 'yes', text: 'Full board review, written informed consent, a data safety monitoring plan, and ClinicalTrials.gov registration before the first patient. Most journals will not publish an unregistered trial.' },
+      [[40, 80], [80, 160], [600, 2000], [60, 150], [80, 150]], '36 to 60', ['redcap', 'ehr', 'ctgov'],
+      'What would the control group receive, and who could be blinded?'),
+    D('sr', 'Systematic review and meta-analysis', 'Systematic review', 'pub', 'sr',
+      { level: 'Not needed', needed: 'no', text: 'No IRB: you analyze published studies, not patients. Register the protocol on PROSPERO before you start screening.' },
+      [[20, 40], [5, 10], [400, 1000], [60, 150], [80, 150]], '12 to 18', ['pubmed', 'embase', 'cochrane', 'cinahl', 'prospero'],
+      'How many studies do you expect to find, and are they similar enough to pool?'),
+    D('scoping', 'Scoping review', 'Scoping review', 'pub', 'scoping',
+      { level: 'Not needed', needed: 'no', text: 'No IRB: you map published literature. Register the protocol on OSF and follow the PRISMA-ScR checklist.' },
+      [[20, 40], [2, 5], [150, 400], [20, 50], [60, 100]], '6 to 12', ['pubmed', 'embase', 'cinahl', 'osf'],
+      'Is the question broad enough for a scoping review, or narrow enough for a systematic review?')
+  ];
+
+  return { S: S, TOPICS: TOPICS, LOCS: LOCS, TIMES: TIMES, AGES: AGES, GENDERS: GENDERS, DESIGNS: DESIGNS, PH: PH };
+})();
+
+</script>
+<script>
+(function () {
+  'use strict';
+  var DATA = RQR_DATA;
+  var S = DATA.S;
+  var $ = function (s) { return document.querySelector(s); };
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+  function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+  function lower1(s) { return /^[A-Z][a-z]/.test(s) ? s.charAt(0).toLowerCase() + s.slice(1) : s; }
+  function join(a) { return a.filter(function (x) { return x; }).join(' '); }
+  function rnd(a) { return a[Math.floor(Math.random() * a.length)]; }
+  function uniq(a) { var seen = {}; return a.filter(function (x) { if (seen[x]) return false; seen[x] = 1; return true; }); }
+
+  /* ---------- similar topics and literature links ---------- */
+  var STOP = ['with', 'from', 'that', 'this', 'into', 'over', 'after', 'during', 'among', 'about', 'their', 'patients', 'patient', 'emergency', 'department', 'research', 'study', 'related', 'acute', 'using', 'does', 'and', 'the'];
+  function stems(text) {
+    return uniq((String(text).toLowerCase().match(/[a-z0-9]+/g) || [])
+      .filter(function (w) { return w.length >= 4 && STOP.indexOf(w) === -1; })
+      .map(function (w) { return w.length > 5 ? w.replace(/(ies|es|s|ing|ed)$/, '') : w; }));
+  }
+  function similarTopics(text, limit) {
+    var st = stems(text);
+    if (!st.length) return [];
+    var words = function (s) { return s.toLowerCase().match(/[a-z0-9]+/g) || []; };
+    var hit = function (list, w) { return list.some(function (x) { return x.indexOf(w) === 0; }); };
+    return DATA.TOPICS.map(function (t) {
+      var core = words(t.label + ' ' + t.noun);
+      var rest = words(t.cohort + ' ' + t.exposure + ' ' + t.intervention + ' ' + t.domain);
+      var score = 0;
+      st.forEach(function (w) { if (hit(core, w)) score += 2; else if (hit(rest, w)) score += 1; });
+      return { t: t, score: score };
+    }).filter(function (x) { return x.score > 0; })
+      .sort(function (a, b) { return b.score - a.score; })
+      .slice(0, limit || 3)
+      .map(function (x) { return x.t; });
+  }
+  function searchLinks(T) {
+    var base = T.searchTerms || (T.custom ? T.label : T.noun);
+    var enc = encodeURIComponent;
+    return [
+      { label: 'PubMed', href: 'https://pubmed.ncbi.nlm.nih.gov/?term=' + enc(base + ' AND (emergency department OR emergency medicine)') },
+      { label: 'Google Scholar', href: 'https://scholar.google.com/scholar?q=' + enc(base + ' emergency department') },
+      { label: 'ClinicalTrials.gov', href: 'https://clinicaltrials.gov/search?term=' + enc(base) }
+    ];
+  }
+
+  /* ---------- live PubMed search (standalone file only) ---------- */
+  var LIVE = true;
+  var PM_FILTER = {
+    case: 'case reports[pt]', chart: 'retrospective studies[mh]', cohort: 'cohort studies[mh]',
+    cc: 'case-control studies[mh]', db: 'databases, factual[mh]', qi: 'quality improvement[mh]',
+    survey: 'surveys and questionnaires[mh]', qual: 'qualitative research[mh]', prosp: 'prospective studies[mh]',
+    rct: 'randomized controlled trial[pt]', sr: 'systematic review[pt]', scoping: 'scoping review[tiab]'
+  };
+  var liveTerm = '';
+  var liveCache = {};
+  var liveCtl = null;
+  var liveTimer = null;
+  function liveBase(T) { return liveTerm || (T.custom ? T.label : T.noun); }
+  function eutils(path, params, signal) {
+    var qs = Object.keys(params).map(function (k) { return k + '=' + encodeURIComponent(params[k]); }).join('&');
+    return fetch('https://eutils.ncbi.nlm.nih.gov/entrez/eutils/' + path + '?' + qs, { signal: signal })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+  }
+  function plain(s) {
+    return String(s || '').replace(/<[^>]+>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
+  }
+  function fetchLive(base, design, signal) {
+    var key = base + '|' + design.id;
+    if (liveCache[key]) return Promise.resolve(liveCache[key]);
+    var q = base + ' AND (emergency department OR emergency medicine)';
+    return eutils('esearch.fcgi', { db: 'pubmed', retmode: 'json', retmax: 5, sort: 'relevance', term: q, tool: 'research_question_roulette' }, signal)
+      .then(function (es) {
+        var r = es && es.esearchresult;
+        if (!r) throw new Error('bad reply');
+        var ids = (r.idlist || []).slice(0, 5);
+        var sumP = ids.length
+          ? eutils('esummary.fcgi', { db: 'pubmed', retmode: 'json', id: ids.join(','), tool: 'research_question_roulette' }, signal)
+          : Promise.resolve(null);
+        var dcP = eutils('esearch.fcgi', { db: 'pubmed', retmode: 'json', retmax: 0, term: q + ' AND ' + PM_FILTER[design.id], tool: 'research_question_roulette' }, signal)
+          .then(function (d) { return d && d.esearchresult ? Number(d.esearchresult.count) : null; }, function () { return null; });
+        return Promise.all([sumP, dcP]).then(function (res) {
+          var sum = res[0] && res[0].result;
+          var papers = ids.map(function (id) {
+            var d = sum && sum[id];
+            return d ? { id: id, title: plain(d.title), journal: plain(d.source), year: String(d.pubdate || '').slice(0, 4) } : null;
+          }).filter(Boolean);
+          var out = { count: Number(r.count), dcount: res[1], papers: papers };
+          liveCache[key] = out;
+          return out;
+        });
+      });
+  }
+  function liveBox(T, design) {
+    var box = el('div', 'claude-box');
+    box.append(el('p', 'src-h', 'Live PubMed results'));
+    var form = el('form', 'custom');
+    form.style.flex = 'none';
+    var lab = el('label', null, 'Search terms');
+    lab.htmlFor = 'pm-terms';
+    var row = el('div', 'custom-row');
+    var inp = el('input');
+    inp.id = 'pm-terms';
+    inp.type = 'text';
+    inp.maxLength = 120;
+    inp.autocomplete = 'off';
+    inp.value = liveBase(T);
+    var go = el('button', 'btn', 'Search');
+    go.type = 'submit';
+    row.append(inp, go);
+    form.append(lab, row);
+    form.addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      var v = inp.value.trim();
+      liveTerm = v && v !== (T.custom ? T.label : T.noun) ? v : '';
+      renderResult();
+    });
+    box.append(form);
+    var status = el('p', 'status', 'Searching PubMed…');
+    status.setAttribute('role', 'status');
+    box.append(status);
+    var list = el('ol', 'papers');
+    box.append(list);
+    if (liveCtl) liveCtl.abort();
+    var ctl = typeof AbortController === 'function' ? new AbortController() : null;
+    liveCtl = ctl;
+    clearTimeout(liveTimer);
+    var base = liveBase(T);
+    liveTimer = setTimeout(function () {
+      fetchLive(base, design, ctl ? ctl.signal : undefined).then(function (res) {
+        status.replaceChildren();
+        var main = el('span', 'live-count', res.count.toLocaleString('en-US') + ' PubMed papers');
+        status.append(main, document.createTextNode(' match “' + base + '” in emergency care.'));
+        if (res.dcount != null) {
+          status.append(document.createTextNode(' ' + res.dcount.toLocaleString('en-US') + ' are tagged as ' + design.short.toLowerCase() + ' studies. Has someone already done this?'));
+        }
+        if (!res.papers.length) { list.append(el('li', 'sub', 'No papers found. Try broader search terms.')); return; }
+        res.papers.forEach(function (pp) {
+          var li = el('li', 'paper');
+          var a = el('a', null, pp.title || ('PubMed ' + pp.id));
+          a.href = 'https://pubmed.ncbi.nlm.nih.gov/' + pp.id + '/';
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          li.append(a);
+          li.append(el('span', 'paper-meta', [pp.journal, pp.year].filter(Boolean).join(' · ')));
+          list.append(li);
+        });
+      }).catch(function (e) {
+        if (e && e.name === 'AbortError') return;
+        status.textContent = 'Could not reach PubMed right now. Check your internet connection, or use the search buttons above.';
+      });
+    }, 350);
+    return box;
+  }
+
+  /* ---------- slots ---------- */
+  var SLOTS = [
+    { key: 'topic', name: 'Topic', ask: 'a topic', opts: DATA.TOPICS, hint: 'e.g. Lightning injuries', domains: true,
+      custom: function (x) { return { domain: 'Your own', label: x, noun: lower1(x), cohort: 'with ' + lower1(x), exposure: 'a delay in treatment', outcome: 'the 30-day return visit rate', intervention: 'a standardized care pathway', rare: [], src: [], sex: '', efic: false, staff: false, custom: true }; } },
+    { key: 'loc', name: 'Location', ask: 'a location', opts: DATA.LOCS, hint: 'e.g. a cruise ship clinic',
+      custom: function (x) { return { label: x, prep: 'in', place: x, custom: true }; } },
+    { key: 'time', name: 'Time period', ask: 'a time period', opts: DATA.TIMES, hint: 'e.g. Kentucky Derby weekend 2025',
+      groups: [['retro', 'Looking back'], ['prosp', 'Going forward']], groupKey: 'mode',
+      custom: function (x) { return { label: x, phrase: 'during ' + x, mode: 'retro', custom: true }; } },
+    { key: 'age', name: 'Age group', ask: 'an age group', opts: DATA.AGES, hint: 'e.g. college students',
+      custom: function (x) { return { id: 'custom', label: x, noun: x, custom: true }; } },
+    { key: 'gender', name: 'Gender', ask: 'a gender group', opts: DATA.GENDERS, hint: 'e.g. nonbinary adults',
+      custom: function (x) { return { label: x, adj: x, custom: true }; } },
+    { key: 'design', name: 'Study design', ask: 'a study design', opts: DATA.DESIGNS, noCustom: true,
+      groups: [['retro', 'Looks back at existing records'], ['either', 'Works either way'], ['prosp', 'Enrolls patients going forward'], ['pub', 'Reviews the published literature']], groupKey: 'mode' }
+  ];
+
+  /* ---------- question builder ---------- */
+  function build(p) {
+    var T = p.topic, L = p.loc, M = p.time, A = p.age, G = p.gender, D = p.design;
+    var staff = !!T.staff;
+    var cmp = !!G.compare;
+    var retro = M.mode === 'retro';
+    var adj = (G.preg && /pregnan/.test(T.cohort)) ? '' : G.adj;
+    var pop = staff
+      ? join([cmp ? '' : adj, 'emergency medicine residents and physicians'])
+      : (cmp ? A.noun : join([adj, A.noun]));
+    var popC = join([pop, T.cohort]);
+    var when = M.phrase;
+    var where = join([L.prep, L.place, when]);
+    var exp = T.exposure, out = T.outcome, intv = T.intervention, noun = T.noun;
+    var q, rows = [];
+    var cmpClause = ', and does it differ between women and men?';
+    var addCmp = false;
+
+    switch (D.tpl) {
+      case 'desc':
+        q = 'Among ' + popC + ' ' + where + ', what is ' + out + ', and what factors are linked to it?';
+        if (cmp) q = 'Among ' + popC + ' ' + where + ', what is ' + out + ', and how does it differ between women and men?';
+        rows = [['Population', cap(popC)], ['Setting', cap(L.place)], ['Time frame', cap(when)], ['Main measure', cap(out)]];
+        break;
+      case 'assoc':
+        q = 'Among ' + popC + ' ' + where + ', is ' + exp + ' associated with ' + out + '?'; addCmp = true;
+        rows = [['Population', cap(popC)], ['Setting', cap(L.place)], ['Time frame', cap(when)], ['Exposure', cap(exp)], ['Comparison', 'Patients with less or none of the exposure'], ['Outcome', cap(out)]];
+        break;
+      case 'interv':
+        q = 'Among ' + popC + ' ' + where + ', does ' + intv + ' change ' + out + ' compared with usual care?'; addCmp = true;
+        rows = [['Population', cap(popC)], ['Setting', cap(L.place)], ['Time frame', cap(when)], ['Intervention', cap(intv)], ['Comparison', 'Usual care'], ['Outcome', cap(out)]];
+        break;
+      case 'qi':
+        q = retro
+          ? 'Among ' + popC + ' ' + where + ', did ' + out + ' improve after ' + intv + ' was introduced?'
+          : 'Among ' + popC + ' ' + where + ', will ' + out + ' improve after ' + intv + ' is introduced?';
+        addCmp = true;
+        rows = [['Population', cap(popC)], ['Setting', cap(L.place)], ['Time frame', cap(when)], ['Change introduced', cap(intv)], ['Comparison', 'Before versus after'], ['Outcome', cap(out)]];
+        break;
+      case 'db':
+        q = 'Using national data on ' + popC + ' ' + when + ', is ' + exp + ' associated with ' + out + '?'; addCmp = true;
+        rows = [['Population', cap(popC)], ['Data', 'A national database (see below)'], ['Setting type', cap(L.place) + ', if the database records hospital type'], ['Time frame', cap(when)], ['Exposure', cap(exp)], ['Outcome', cap(out)]];
+        break;
+      case 'survey':
+        if (staff) {
+          q = 'In a survey of ' + popC + ' ' + where + ', what is ' + out + ', and what factors are linked to it?';
+          if (cmp) q = 'In a survey of ' + popC + ' ' + where + ', what is ' + out + ', and how does it differ between women and men?';
+          rows = [['Respondents', cap(popC)], ['Setting', cap(L.place)], ['Time frame', cap(when)], ['Main measure', cap(out)]];
+        } else {
+          q = 'In a survey of emergency clinicians ' + where + ', what do they know and believe about using ' + intv + ' for ' + popC + '?';
+          rows = [['Respondents', 'Emergency clinicians'], ['Patients of interest', cap(popC)], ['Setting', cap(L.place)], ['Time frame', cap(when)], ['Topic of the survey', cap(intv)]];
+        }
+        break;
+      case 'qual':
+        q = staff
+          ? 'How do ' + popC + ' ' + where + ' describe their experience of ' + noun + ', and what do they say would help?'
+          : 'How do ' + popC + ' ' + where + ' describe their emergency care, and what do they say would improve it?';
+        rows = [['Participants', cap(popC)], ['Setting', cap(L.place)], ['Time frame', cap(when)], ['Focus', staff ? cap(noun) : 'Experience of emergency care']];
+        break;
+      case 'sr':
+        q = 'Across published studies of ' + popC + ', does ' + intv + ' change ' + out + ' compared with usual care?'; addCmp = true;
+        rows = [['Studies of', cap(popC)], ['Intervention', cap(intv)], ['Comparison', 'Usual care'], ['Outcome', cap(out)], ['Settings to include', 'Settings like ' + L.place], ['Publication window', cap(when)]];
+        break;
+      case 'scoping':
+        q = 'What has been published about ' + noun + ' among ' + pop + ', and where are the gaps?';
+        rows = [['Population', cap(pop)], ['Concept', cap(noun)], ['Context', 'Settings like ' + L.place], ['Publication window', cap(when)]];
+        break;
+      default: /* case */
+        q = 'What can a case report or short case series of ' + noun + ' among ' + pop + ' ' + where + ' teach about recognition and management?';
+        rows = [['Patients', cap(pop)], ['Condition', cap(noun)], ['Setting', cap(L.place)], ['Time frame', cap(when)]];
+    }
+    if (cmp && addCmp) {
+      q = q.replace(/\?$/, cmpClause);
+      rows.push(['Analysis', 'Report women and men separately and compare them']);
+    }
+    rows.push(['Study design', D.label]);
+
+    /* data sources */
+    var topicSrc = (T.src || []).slice();
+    if (!staff) {
+      if (L.ky) topicSrc.push('kiprc', 'kyhosp');
+      if (L.kids) topicSrc.push('phis', 'pecarn');
+      if (L.ems) topicSrc.push('nemsis');
+      if (L.national) topicSrc.push('neds', 'nhamcs');
+      if (L.lowres) topicSrc.push('localreg');
+    }
+    var designSrc = D.src.slice();
+    topicSrc = uniq(topicSrc).filter(function (k) { return designSrc.indexOf(k) === -1 && S[k]; });
+
+    /* IRB */
+    var needs = D.irb.needed !== 'no';
+    var irbNotes = [];
+    var level = D.irb.level;
+    var irbClass = D.irb.needed;
+    if (needs) {
+      if (!staff && A.kid && D.id !== 'db') irbNotes.push('Children are a protected group (45 CFR 46, Subpart D). Expect parental permission and the child’s assent for anything involving contact, and surveys or interviews of children cannot use the usual exemption.');
+      if (G.preg && D.id !== 'db') irbNotes.push('Pregnant patients have added protections (Subpart B). These matter most when the study carries more than minimal risk.');
+      if (L.prison && !staff && D.id !== 'db') { irbNotes.push('People in jail or prison are a protected group (Subpart C). Expect full board review with a prisoner representative.'); level = 'Full board'; irbClass = 'yes'; }
+      if (T.efic && (D.id === 'rct' || D.id === 'prosp')) irbNotes.push('Patients with this condition often cannot consent in the moment. Trials like this may use Exception from Informed Consent (21 CFR 50.24), which needs community consultation and public disclosure first.');
+      if (staff && (D.id === 'survey' || D.id === 'qual')) irbNotes.push('Studying your own residents raises coercion concerns. Have someone outside the program collect responses, and keep them anonymous.');
+    }
+
+    /* hours */
+    var phases = D.phases.map(function (r) { return [r[0], r[1]]; });
+    var mods = [];
+    var protectedPop = needs && D.id !== 'db' && ((!staff && A.kid) || G.preg || (L.prison && !staff));
+    if (protectedPop) { phases[1] = [phases[1][0] + 10, phases[1][1] + 20]; mods.push('+10 to 20 hours of approvals for a protected population'); }
+    if (L.multi && ['qi', 'survey', 'qual', 'prosp', 'rct'].indexOf(D.id) !== -1) {
+      phases[2] = [Math.round(phases[2][0] * 1.25), Math.round(phases[2][1] * 1.25)];
+      mods.push('+25% data collection time for coordinating several sites');
+    }
+    var lo = 0, hi = 0;
+    phases.forEach(function (r) { lo += r[0]; hi += r[1]; });
+    var r10 = function (x) { return x >= 100 ? Math.round(x / 10) * 10 : Math.round(x / 5) * 5; };
+
+    /* warnings */
+    var warns = [];
+    if (D.mode === 'retro' && M.mode === 'prosp') warns.push('A ' + D.short.toLowerCase() + ' looks back at existing records, but the time period is in the future. Pick a past time period, or switch to a design that enrolls patients going forward.');
+    if (D.mode === 'prosp' && M.mode === 'retro') warns.push('A ' + (D.id === 'rct' ? 'randomized trial' : 'prospective cohort') + ' enrolls patients going forward, but the time period is in the past. Pick a future time period, or switch to a design that looks back.');
+    if (D.mode === 'pub' && M.mode === 'prosp') warns.push('Reviews summarize studies already published, so the time period works as a publication window. Pick a past time period.');
+    if (staff) warns.push('This topic studies clinicians, so the age-group pick is set aside.');
+    if (staff && D.id === 'db') warns.push('Few national databases cover clinicians. A survey or qualitative study may fit this topic better.');
+    if (staff && D.id === 'case') warns.push('Case reports describe patients. Pick another design for a clinician topic.');
+    if (!staff && T.rare.indexOf(A.id) !== -1) warns.push(T.label + ' is uncommon in ' + A.label.toLowerCase() + '. Show the question is worth asking, then estimate how many patients you could realistically find.');
+    if (!staff && L.kids && A.id && !A.kid && A.id !== 'custom') warns.push('A children’s hospital emergency department rarely treats ' + A.label.toLowerCase() + '. Where would your patients come from?');
+    if (T.sex && G.sex && T.sex !== G.sex) warns.push(T.label + ' only applies to ' + T.sex + ' patients, so this population will be empty. Pick another gender group.');
+    if (T.sex && cmp) warns.push(T.label + ' only applies to ' + T.sex + ' patients, so comparing women and men will not work.');
+    if (G.preg && !staff && (A.id === 'infants' || A.id === 'children')) warns.push('Pregnancy is not expected in ' + A.label.toLowerCase() + '. Pick another age or gender group.');
+    if (!staff && D.id === 'db' && topicSrc.length === 0) warns.push('No national database is listed for this topic. Check the literature for one, or switch to a chart review.');
+
+    /* prompts */
+    var prompts = [D.prompt];
+    if (cmp) prompts.push('How would you define and record sex and gender in your data?');
+    prompts.push('Each pick narrows the sample. Which one would you drop first?');
+
+    return {
+      q: q, rows: rows, prompts: prompts, warns: warns,
+      designSrc: designSrc, topicSrc: topicSrc,
+      irb: { level: level, cls: irbClass, text: D.irb.text, notes: irbNotes },
+      hours: { lo: r10(lo), hi: r10(hi), phases: phases, mods: mods, months: D.months }
+    };
+  }
+
+  /* ---------- state ---------- */
+  var reduce = false;
+  try { reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { reduce = false; }
+  function find(arr, label) { for (var i = 0; i < arr.length; i++) if (arr[i].label === label) return arr[i]; return arr[0]; }
+  var picks = {
+    topic: find(DATA.TOPICS, 'Sepsis'),
+    loc: find(DATA.LOCS, 'Rural critical access hospital'),
+    time: find(DATA.TIMES, 'Past 10 years'),
+    age: find(DATA.AGES, 'Older adults'),
+    gender: find(DATA.GENDERS, 'Women'),
+    design: find(DATA.DESIGNS, 'Retrospective cohort study')
+  };
+  var active = 0;
+  var framed = true;
+  var example = true;
+  var busy = false;
+  var domainSel = picks.topic.domain;
+  var DOMAINS = uniq(DATA.TOPICS.map(function (t) { return t.domain; }));
+
+  function allFilled() { return SLOTS.every(function (s) { return picks[s.key]; }); }
+  function nextEmpty(from) {
+    for (var k = 1; k <= SLOTS.length; k++) {
+      var j = (from + k) % SLOTS.length;
+      if (!picks[SLOTS[j].key]) return j;
+    }
+    return -1;
+  }
+
+  /* ---------- render ---------- */
+  function renderTiles() {
+    var ol = $('#tiles');
+    ol.replaceChildren();
+    SLOTS.forEach(function (s, i) {
+      var li = el('li');
+      var b = el('button', 'tile');
+      b.type = 'button';
+      if (i === active) b.setAttribute('aria-current', 'true');
+      b.append(el('span', 'who', 'Resident ' + (i + 1)));
+      b.append(el('span', 'what', s.name));
+      var v = picks[s.key];
+      b.append(el('span', v ? 'val' : 'val empty', v ? v.label : 'Waiting for a pick'));
+      b.addEventListener('click', function () {
+        if (busy) return;
+        active = i;
+        if (s.key === 'topic' && picks.topic && picks.topic.domain && DOMAINS.indexOf(picks.topic.domain) !== -1) domainSel = picks.topic.domain;
+        renderTiles();
+        renderChooser();
+      });
+      li.append(b);
+      ol.append(li);
+    });
+  }
+
+  function chipList(s, opts) {
+    var ul = el('ul', 'chips');
+    var cur = picks[s.key];
+    opts.forEach(function (o) {
+      var li = el('li');
+      var b = el('button', 'chip', o.label);
+      b.type = 'button';
+      b.setAttribute('aria-pressed', cur && cur.label === o.label ? 'true' : 'false');
+      b.addEventListener('click', function () { if (!busy) pick(active, o); });
+      li.append(b);
+      ul.append(li);
+    });
+    return ul;
+  }
+
+  function renderChooser() {
+    var s = SLOTS[active];
+    $('#chooser-title').textContent = 'Resident ' + (active + 1) + ' picks ' + s.ask;
+    var dom = $('#domains');
+    var box = $('#chips');
+    box.replaceChildren();
+    dom.replaceChildren();
+    dom.hidden = !s.domains;
+    if (s.domains) {
+      DOMAINS.forEach(function (d) {
+        var b = el('button', 'domain');
+        b.type = 'button';
+        b.append(document.createTextNode(d));
+        var n = DATA.TOPICS.filter(function (t) { return t.domain === d; }).length;
+        b.append(el('span', 'n', String(n)));
+        b.setAttribute('aria-pressed', d === domainSel ? 'true' : 'false');
+        b.addEventListener('click', function () { domainSel = d; renderChooser(); });
+        dom.append(b);
+      });
+      box.append(chipList(s, s.opts.filter(function (t) { return t.domain === domainSel; })));
+    } else if (s.groups) {
+      var wrap = el('div', 'stack');
+      s.groups.forEach(function (g) {
+        var items = s.opts.filter(function (o) { return o[s.groupKey] === g[0]; });
+        if (!items.length) return;
+        var grp = el('div', 'group');
+        grp.append(el('p', 'group-h', g[1]));
+        grp.append(chipList(s, items));
+        wrap.append(grp);
+      });
+      box.append(wrap);
+    } else {
+      box.append(chipList(s, s.opts));
+    }
+    $('#custom-form').hidden = !!s.noCustom;
+    $('#custom-input').placeholder = s.hint || '';
+  }
+
+  function sourceList(keys) {
+    var ul = el('ul', 'sources');
+    keys.forEach(function (k) {
+      var s = S[k];
+      var li = el('li', 'src');
+      li.append(el('span', 'src-name', s.name));
+      li.append(el('span', 'src-access', s.access));
+      li.append(el('span', 'src-note', s.note));
+      ul.append(li);
+    });
+    return ul;
+  }
+
+  function renderResult() {
+    var box = $('#result');
+    box.replaceChildren();
+    var open = SLOTS.filter(function (s) { return !picks[s.key]; }).length;
+    if (!framed || open) {
+      var e = el('div', 'empty-state');
+      e.append(el('h2', null, 'Your question appears here'));
+      e.append(el('p', null, open
+        ? open + ' of 6 picks still open. Fill them in turn, or fill the empty ones at random.'
+        : 'All six picks are in. Press Frame the question.'));
+      box.append(e);
+      return;
+    }
+    var D = picks.design;
+    var r = build(picks);
+    var card = el('article', 'result');
+    card.append(el('p', 'tag', example ? 'Example round. Press New round to run it live.' : 'Your research question'));
+    var q = el('p', 'question', r.q);
+    q.id = 'question';
+    card.append(q);
+
+    var dl0 = el('p', 'design-line');
+    dl0.append(el('span', 'design-name', D.label));
+    var irbPill = el('span', 'pill ' + r.irb.cls, 'IRB: ' + r.irb.level);
+    dl0.append(irbPill);
+    dl0.append(el('span', 'pill neutral', r.hours.lo + ' to ' + r.hours.hi + ' hours'));
+    card.append(dl0);
+
+    if (r.warns.length) {
+      var w = el('div', 'warns');
+      r.warns.forEach(function (x) {
+        var p = el('p', 'heads');
+        p.append(el('b', null, 'Heads up'));
+        p.append(document.createTextNode(x));
+        w.append(p);
+      });
+      card.append(w);
+    }
+
+    var panels = el('div', 'panels');
+
+    // breakdown
+    var pb = el('section', 'panel');
+    pb.append(el('h3', null, 'Breakdown'));
+    var dl = el('dl', 'meta');
+    r.rows.forEach(function (row) { dl.append(el('dt', null, row[0])); dl.append(el('dd', null, row[1])); });
+    pb.append(dl);
+    panels.append(pb);
+
+    // hours
+    var ph = el('section', 'panel');
+    ph.append(el('h3', null, 'Hours to a manuscript'));
+    var big = el('p', 'hours-big', r.hours.lo.toLocaleString('en-US') + '–' + r.hours.hi.toLocaleString('en-US'));
+    big.append(el('small', null, 'hours of work'));
+    ph.append(big);
+    ph.append(el('p', 'sub', 'Usually spread over ' + r.hours.months + ' months of calendar time.'));
+    var ul = el('ul', 'phases');
+    var mids = r.hours.phases.map(function (x) { return (x[0] + x[1]) / 2; });
+    var maxMid = Math.max.apply(null, mids);
+    r.hours.phases.forEach(function (x, i) {
+      var li = el('li', 'phase' + (mids[i] === maxMid ? ' lead' : ''));
+      li.append(el('span', null, DATA.PH[i]));
+      li.append(el('span', 'num', x[0] + '–' + x[1] + ' h'));
+      var tr = el('span', 'track');
+      var f = el('span', 'fill');
+      f.style.display = 'block';
+      f.style.width = Math.max(2, Math.round(mids[i] / maxMid * 100)) + '%';
+      tr.append(f);
+      li.append(tr);
+      ul.append(li);
+    });
+    ph.append(ul);
+    if (r.hours.mods.length) {
+      var ml = el('ul', 'small-list');
+      r.hours.mods.forEach(function (m) { ml.append(el('li', null, m)); });
+      ph.append(ml);
+    }
+    ph.append(el('p', 'fine', D.id === 'sr'
+      ? 'For comparison, Allen and Olkin (1999) found a median of about 1,110 hours per meta-analysis (range 216 to 2,518). Borah and colleagues (2017) found reviews took a mean of 67 weeks with about 5 authors.'
+      : 'Rough planning estimates for one resident working with a mentor and a statistician. Working hours, not calendar time; real projects vary widely.'));
+    panels.append(ph);
+
+    // IRB
+    var pi = el('section', 'panel');
+    pi.append(el('h3', null, 'Do you need the IRB?'));
+    var lv = el('p', 'design-line');
+    lv.append(el('span', 'pill ' + r.irb.cls, r.irb.level));
+    pi.append(lv);
+    pi.append(el('p', null, r.irb.text));
+    if (r.irb.notes.length) {
+      var nl = el('ul', 'small-list');
+      r.irb.notes.forEach(function (n) { nl.append(el('li', null, n)); });
+      pi.append(nl);
+    }
+    pi.append(el('p', 'fine', 'General US rules. Your institution’s IRB makes the final call, so submit early and ask for a determination when unsure.'));
+    panels.append(pi);
+
+    // data
+    var pd = el('section', 'panel');
+    pd.append(el('h3', null, 'Where to find the data'));
+    if (D.id === 'db') {
+      if (r.topicSrc.length) {
+        pd.append(el('p', 'src-h', 'Candidate databases for this topic'));
+        pd.append(sourceList(r.topicSrc));
+      } else {
+        pd.append(el('p', 'sub', 'No national database is listed for this topic yet.'));
+      }
+    } else {
+      if (r.designSrc.length) {
+        pd.append(el('p', 'src-h', 'For this design'));
+        pd.append(sourceList(r.designSrc));
+      }
+      if (r.topicSrc.length) {
+        pd.append(el('p', 'src-h', 'Existing datasets on this topic'));
+        pd.append(sourceList(r.topicSrc));
+      }
+    }
+    panels.append(pd);
+    card.append(panels);
+
+    card.append(renderSimilar(picks.topic));
+
+    var d = el('div', 'discuss');
+    d.append(el('h3', null, 'Argue about it'));
+    var pl = el('ul');
+    r.prompts.forEach(function (x) { pl.append(el('li', null, x)); });
+    d.append(pl);
+    card.append(d);
+
+    var act = el('div', 'actions');
+    var again = el('button', 'btn', 'Try another design');
+    again.type = 'button';
+    again.addEventListener('click', function () {
+      var others = DATA.DESIGNS.filter(function (x) { return x !== picks.design; });
+      picks.design = rnd(others);
+      example = false;
+      renderTiles();
+      if (SLOTS[active].key === 'design') renderChooser();
+      renderResult();
+    });
+    var copy = el('button', 'btn', 'Copy question');
+    copy.type = 'button';
+    var status = el('span', 'status');
+    status.setAttribute('role', 'status');
+    copy.addEventListener('click', function () { copyQuestion(status); });
+    act.append(again, copy, status);
+    card.append(act);
+    box.append(card);
+  }
+
+  function useTopic(t) {
+    picks.topic = t;
+    liveTerm = '';
+    if (DOMAINS.indexOf(t.domain) !== -1) domainSel = t.domain;
+    example = false;
+    renderTiles();
+    if (SLOTS[active].key === 'topic') renderChooser();
+    renderResult();
+  }
+
+  function topicChips(list) {
+    var ul = el('ul', 'chips');
+    list.forEach(function (t) {
+      var li = el('li');
+      var b = el('button', 'chip', t.label);
+      b.type = 'button';
+      b.setAttribute('aria-pressed', 'false');
+      b.addEventListener('click', function () { useTopic(t); });
+      li.append(b);
+      ul.append(li);
+    });
+    return ul;
+  }
+
+  function renderSimilar(T) {
+    var sec = el('section', 'similar');
+    sec.append(el('h3', null, T.custom ? 'Similar research on “' + T.label + '”' : 'Search for similar studies'));
+    sec.append(el('p', 'sub', 'Each button opens a new tab with the search already run.'));
+    var links = el('div', 'links');
+    searchLinks(T).forEach(function (l) {
+      var a = el('a', 'btn');
+      a.href = l.href;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.append(document.createTextNode(l.label));
+      a.append(el('span', 'arrow', '↗'));
+      links.append(a);
+    });
+    sec.append(links);
+    if (LIVE) sec.append(liveBox(T, picks.design));
+    if (!T.custom) return sec;
+
+    var sim = similarTopics(T.label, 3);
+    if (sim.length) {
+      sec.append(el('p', 'src-h', 'Closest topics already in the roulette'));
+      sec.append(topicChips(sim));
+    }
+
+    return sec;
+  }
+
+  function copyQuestion(status) {
+    var q = document.getElementById('question');
+    var text = q.textContent;
+    var done = function () { status.textContent = 'Copied'; };
+    var fallback = function () {
+      try {
+        var range = document.createRange();
+        range.selectNodeContents(q);
+        var sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      } catch (e) { /* selection unavailable */ }
+      status.textContent = 'Selected. Press Ctrl+C or Cmd+C to copy.';
+    };
+    try { navigator.clipboard.writeText(text).then(done, fallback); } catch (e) { fallback(); }
+  }
+
+  function renderAll() {
+    renderTiles();
+    renderChooser();
+    $('#frame').disabled = !allFilled();
+    renderResult();
+  }
+
+  /* ---------- actions ---------- */
+  function pick(i, opt) {
+    picks[SLOTS[i].key] = opt;
+    if (SLOTS[i].key === 'topic') liveTerm = '';
+    if (SLOTS[i].key === 'topic' && opt.domain && DOMAINS.indexOf(opt.domain) !== -1) domainSel = opt.domain;
+    example = false;
+    framed = false;
+    var n = nextEmpty(i);
+    if (n !== -1) active = n;
+    $('#custom-input').value = '';
+    renderAll();
+  }
+
+  function spin(i) {
+    if (busy) return;
+    var s = SLOTS[i];
+    var cur = picks[s.key];
+    var pool = s.opts.filter(function (o) { return !cur || o.label !== cur.label; });
+    var target = rnd(pool);
+    if (reduce) { pick(i, target); return; }
+    busy = true;
+    active = i;
+    renderTiles();
+    renderChooser();
+    var valEl = document.querySelector('#tiles li:nth-child(' + (i + 1) + ') .val');
+    var n = 0;
+    var timer = setInterval(function () {
+      valEl.textContent = rnd(s.opts).label;
+      valEl.className = 'val';
+      n += 1;
+      if (n >= 12) { clearInterval(timer); busy = false; pick(i, target); }
+    }, 65);
+  }
+
+  $('#custom-form').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    if (busy) return;
+    var s = SLOTS[active];
+    if (s.noCustom) return;
+    var v = $('#custom-input').value.trim();
+    if (!v) return;
+    pick(active, s.custom(v));
+  });
+  $('#spin').addEventListener('click', function () { spin(active); });
+  $('#frame').addEventListener('click', function () {
+    if (!allFilled()) return;
+    framed = true;
+    example = false;
+    renderResult();
+  });
+  $('#fill').addEventListener('click', function () {
+    if (busy) return;
+    if (!picks.topic) liveTerm = '';
+    SLOTS.forEach(function (s) { if (!picks[s.key]) picks[s.key] = rnd(s.opts); });
+    if (picks.topic && picks.topic.domain && DOMAINS.indexOf(picks.topic.domain) !== -1) domainSel = picks.topic.domain;
+    example = false;
+    framed = false;
+    renderAll();
+  });
+  $('#reset').addEventListener('click', function () {
+    if (busy) return;
+    picks = {};
+    active = 0;
+    liveTerm = '';
+    framed = false;
+    example = false;
+    $('#custom-input').value = '';
+    renderAll();
+  });
+
+  window.__rqr = { fetchLive: fetchLive, build: build, SLOTS: SLOTS, DATA: DATA, similarTopics: similarTopics, searchLinks: searchLinks };
+  renderAll();
+})();
+</script>
+
+</body>
+</html>
